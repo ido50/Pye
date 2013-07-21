@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w
+
+use lib 'lib';
+use warnings;
+use strict;
+
+use Getopt::Compact;
+use Pye;
+use JSON;
+use Term::ANSIColor;
+
+$MongoDB::Cursor::slave_okay = 1;
+
+my $gopt = Getopt::Compact->new(
+	name => 'pye',
+	struct => [
+		[[qw/H host/], 'The host to connect to, defauls to localhost', ':s'],
+		[[qw/p port/], 'The port to connect on, defaults to 27017', ':s'],
+		[[qw/d database/], 'The database to use, defaults to logs', ':s'],
+		[[qw/c collection/], 'The collection to use, defaults to logs', ':s'],
+		[[qw/s session_id/], 'The session_id to display, if not provided the latest 10 sessions in the log will be listed', ':s']
+	]
+);
+my $opts = $gopt->opts;
+my %options = (
+	host => 'localhost',
+	port => 27017,
+	database => 'logs',
+	collection => 'logs',
+);
+@options{grep(defined $opts->{$_}, keys(%$opts))} = grep(defined $_, values(%$opts))
+	if $opts && ref $opts eq 'HASH' && scalar keys %$opts;
+
+$options{log_db} = delete($options{database});
+$options{log_coll} = delete($options{collection});
+
+my $pye = Pye->new(%options);
+my $json = JSON->new->utf8->pretty;
+
+if ($options{session_id}) {
+	my @entries = $pye->find_by_session($options{session_id});
+	if (scalar @entries) {
+		foreach my $doc (@entries) {
+			print color 'bold red';
+			print $doc->{date}->ymd, ', ', $doc->{date}->hms, ': ';
+			print color 'reset';
+			print $doc->{text}, "\n";
+			if ($doc->{data}) {
+				print color 'green';
+				my @rows = split(/\n/, $json->encode($doc->{data}));
+				for (my $i = 0; $i <= $#rows; $i++) {
+					chomp($rows[$i]);
+					print "\t $rows[$i]";
+					#print "\n" if $i < $#rows;
+					print "\n";
+				}
+			}
+			print "\n";
+		}
+	} else {
+		print "Nothing found\n";
+	}
+} else {
+	my @sessions = $pye->latest_sessions(10);
+
+	if (scalar @sessions) {
+		print "Latest sessions logged:\n";
+		foreach (@sessions) {
+			print "Session $_->{_id}, started at ", $_->{value}->ymd, ', ', $_->{value}->hms, "\n";
+		}
+	} else {
+		print "No sessions in log\n";
+	}
+}
