@@ -7,7 +7,6 @@ use strict;
 use version;
 
 use Carp;
-use DateTime;
 use MongoDB;
 use MongoDB::Code;
 use Tie::IxHash;
@@ -31,10 +30,13 @@ sub new {
 			MongoDB::Connection->new(%opts);
 
 	my $db = $conn->get_database($db_name);
+	my $coll = $db->get_collection($coll_name);
+
+	$coll->ensure_index({ session_id => 1 });
 
 	return bless {
 		db => $db,
-		coll => $db->get_collection($coll_name)
+		coll => $coll
 	}, $class;
 }
 
@@ -42,7 +44,7 @@ sub log {
 	my ($self, $sid, $text, $data) = @_;
 
 	my $doc = Tie::IxHash->new(
-		session_id => $sid,
+		session_id => "$sid",
 		date => $self->{db}->eval($now),
 		text => $text,
 	);
@@ -59,9 +61,7 @@ sub log {
 sub find_by_session {
 	my ($self, $session_id) = @_;
 
-	$self->{coll}->find({
-		session_id => { '$in' => [''.$session_id, int($session_id)] }
-	})->sort({ date => 1 })->all;
+	$self->{coll}->find({ session_id => "$session_id" })->sort({ date => 1 })->all;
 }
 
 sub latest_sessions {
@@ -116,6 +116,12 @@ sub _remove_dots {
 	} else {
 		return $data;
 	}
+}
+
+sub _remove_session_logs {
+	my ($self, $session_id) = @_;
+
+	$self->{coll}->remove({ session_id => "$session_id" }, { safe => 1 });
 }
 
 =head1 NAME

@@ -8,6 +8,7 @@ use Getopt::Compact;
 use Pye;
 use JSON;
 use Term::ANSIColor;
+use Text::SpanningTable;
 
 $MongoDB::Cursor::slave_okay = 1;
 
@@ -65,9 +66,18 @@ if ($options{session_id}) {
 
 	if (scalar @sessions) {
 		print "Latest sessions logged:\n";
+		print color 'bold';
+		my $t = Text::SpanningTable->new(14, 12, 24); $t->newlines(1);
+		print $t->hr('top');
+		print $t->row('Date', 'Time', 'Session ID');
+		print $t->dhr;
+		print color 'reset';
 		foreach (@sessions) {
-			print "Session $_->{_id}, started at ", $_->{value}->ymd, ', ', $_->{value}->hms, "\n";
+			print $t->row($_->{value}->ymd, $_->{value}->hms, $_->{_id});
 		}
+		print color 'bold';
+		print $t->hr('bottom');
+		print color 'reset';
 	} else {
 		print "No sessions in log\n";
 	}
