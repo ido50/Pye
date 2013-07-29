@@ -21,6 +21,7 @@ sub new {
 
 	my $db_name = delete($opts{log_db}) || 'logs';
 	my $coll_name = delete($opts{log_coll}) || 'logs';
+	my $safety = delete($opts{be_safe}) || 0;
 
 	# use the appropriate mongodb connection class
 	# depending on the version of the MongoDB driver
@@ -36,7 +37,8 @@ sub new {
 
 	return bless {
 		db => $db,
-		coll => $coll
+		coll => $coll,
+		safety => $safety
 	}, $class;
 }
 
@@ -55,7 +57,7 @@ sub log {
 		$doc->Push(data => $self->_remove_dots($data));
 	}
 
-	$self->{coll}->insert($doc);
+	$self->{coll}->insert($doc, { safe => $self->{safety} });
 }
 
 sub find_by_session {
@@ -121,7 +123,7 @@ sub _remove_dots {
 sub _remove_session_logs {
 	my ($self, $session_id) = @_;
 
-	$self->{coll}->remove({ session_id => "$session_id" }, { safe => 1 });
+	$self->{coll}->remove({ session_id => "$session_id" }, { safe => $self->{safety} });
 }
 
 =head1 NAME
