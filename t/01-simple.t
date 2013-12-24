@@ -5,30 +5,41 @@ use strict;
 use Test::More tests => 7;
 use Pye;
 
-my $pye = Pye->new(
-	log_db => 'test',
-	log_coll => 'pye_test',
-	be_safe => 1
-);
+my $pye;
 
-ok($pye, "Pye object created");
+eval {
+	$pye = Pye->new(
+		log_db => 'test',
+		log_coll => 'pye_test',
+		be_safe => 1
+	);
+};
 
-ok($pye->log(1, "What's up?"), "Simple log message");
+SKIP: {
+	if ($@) {
+		diag("Skipped since MongoDB is not running.");
+		skip("MongoDB needs to be running for this test.", 7);
+	}
 
-ok($pye->log(1, "Some data", { hey => 'there' }), "Log message with data structure");
+	ok($pye, "Pye object created");
 
-my @latest_sessions = $pye->list_sessions;
+	ok($pye->log(1, "What's up?"), "Simple log message");
 
-is(scalar(@latest_sessions), 1, "We only have one session");
+	ok($pye->log(1, "Some data", { hey => 'there' }), "Log message with data structure");
 
-is($latest_sessions[0]->{_id}, '1', "We have the correct session ID");
+	my @latest_sessions = $pye->list_sessions;
 
-my @logs = $pye->session_log(1);
+	is(scalar(@latest_sessions), 1, "We only have one session");
 
-is(scalar(@logs), 2, 'Session has two log messages');
+	is($latest_sessions[0]->{_id}, '1', "We have the correct session ID");
 
-ok(exists $logs[1]->{data} && $logs[1]->{data}->{hey} eq 'there', 'Second log message has a data element');
+	my @logs = $pye->session_log(1);
 
-$pye->_remove_session_logs(1);
+	is(scalar(@logs), 2, 'Session has two log messages');
+
+	ok(exists $logs[1]->{data} && $logs[1]->{data}->{hey} eq 'there', 'Second log message has a data element');
+
+	$pye->_remove_session_logs(1);
+}
 
 done_testing();
