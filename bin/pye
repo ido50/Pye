@@ -6,7 +6,7 @@ use strict;
 
 use Getopt::Compact;
 use Pye;
-use JSON;
+use JSON::MaybeXS;
 use Term::ANSIColor;
 use Text::SpanningTable;
 

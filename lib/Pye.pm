@@ -2,19 +2,11 @@ package Pye;
 
 # ABSTRACT: Session-based logging platform on top of MongoDB
 
-use warnings;
-use strict;
-use version;
-
 use Carp;
-use MongoDB;
-use MongoDB::Code;
-use Tie::IxHash;
+use Role::Tiny;
 
-our $VERSION = "1.000001";
+our $VERSION = "2.000000";
 $VERSION = eval $VERSION;
-
-my $now = MongoDB::Code->new(code => 'function() { return new Date() }');
 
 =head1 NAME
 
@@ -68,210 +60,9 @@ died on.
 
 =back
 
-=head1 CONSTRUCTOR
-
-=head2 new( [ %opts ] )
-
-Creates a new instance of this class. C<%opts> is anything that can be
-passed to L<MongoDB::MongoClient> to initiate a database connection, plus
-the following options:
-
-=over
-
-=item * B<log_db>
-
-The name of the database to use for saving log messages. Defaults to "logs".
-
-=item * B<log_coll>
-
-The name of the collection in which to save the messages. Defaults to "logs" too.
-
-=item * B<session_coll>
-
-The name of the collection in which to save session info. Defaults to "sessions".
-
-=item * B<be_safe>
-
-Boolean indicating whether inserts should be safe (see L<MongoDB::Collection/"insert ($object, $options?)">
-for more info). Defaults to a false value.
-
-=back
-
 =cut
 
-sub new {
-	my ($class, %opts) = @_;
-
-	my $db_name = delete($opts{log_db}) || 'logs';
-	my $lcoll_name = delete($opts{log_coll}) || 'logs';
-	my $scoll_name = delete($opts{session_coll}) || 'sessions';
-	my $safety = delete($opts{be_safe}) || 0;
-
-	# use the appropriate mongodb connection class
-	# depending on the version of the MongoDB driver
-	# installed
-	my $conn = version->parse($MongoDB::VERSION) >= v0.502.0 ?
-		MongoDB::MongoClient->new(%opts) :
-			MongoDB::Connection->new(%opts);
-
-	my $db = $conn->get_database($db_name);
-	my $lcoll = $db->get_collection($lcoll_name);
-	my $scoll = $db->get_collection($scoll_name);
-
-	$lcoll->ensure_index({ session_id => 1 });
-	$scoll->ensure_index({ date => -1 });
-
-	return bless {
-		db => $db,
-		lcoll => $lcoll,
-		scoll => $scoll,
-		safety => $safety
-	}, $class;
-}
-
-=head1 OBJECT METHODS
-
-=head2 log( $session_id, $text, [ \%data ] )
-
-Inserts a new log message to the database, for the session with the supplied
-ID and with the supplied text. Optionally, a hash-ref of supporting data can
-be attached to the message.
-
-You should note that for consistency, the session ID will always be stored in
-the database as a string, even if it's a number.
-
-If a data hash-ref has been supplied, C<Pye> will make sure (recursively)
-that no keys of that hash-ref have dots in them, since MongoDB will refuse to
-store such hashes. All dots found will be replaced with semicolons (";").
-
-=cut
-
-sub log {
-	my ($self, $sid, $text, $data) = @_;
-
-	my $date = $self->{db}->eval($now);
-
-	$self->{scoll}->insert({ _id => "$sid", date => $date })
-		unless $self->{scoll}->find_one({ _id => "$sid" });
-
-	my $doc = Tie::IxHash->new(
-		session_id => "$sid",
-		date => $date,
-		text => $text,
-	);
-
-	if ($data) {
-		# make sure there are no dots in any hash keys,
-		# as mongodb cannot accept this
-		$doc->Push(data => $self->_remove_dots($data));
-	}
-
-	$self->{lcoll}->insert($doc, { safe => $self->{safety} });
-}
-
-=head2 session_log( $session_id )
-
-Returns all log messages for the supplied session ID, sorted by date in ascending
-order.
-
-=cut
-
-sub session_log {
-	my ($self, $session_id) = @_;
-
-	$self->{lcoll}->find({ session_id => "$session_id" })->sort({ date => 1 })->all;
-}
-
-=head2 list_sessions( [ \%opts ] )
-
-Returns a list of sessions, sorted by the date of the first message logged for each
-session in descending order. If no options are provided, the latest 10 sessions are
-returned. The following options are allowed:
-
-=over
-
-=item * B<limit>
-
-How many sessions to list, defaults to 10.
-
-=item * B<query>
-
-A MongoDB query hash-ref to filter the sessions. Defaults to an empty query. You can
-query on the session ID (in the C<_id> attribute) and the date (in the C<date> attribute).
-
-=item * B<sort>
-
-A MongoDB sort hash-ref to sort the results. Defaults to C<< { date => -1 } >> so that
-sessions are sorted by date in descending order.
-
-=back
-
-=cut
-
-sub list_sessions {
-	my ($self, $opts) = @_;
-
-	$opts			||= {};
-	$opts->{limit}	||= 10;
-	$opts->{query}	||= {};
-	$opts->{sort}	||= { date => -1 };
-
-	return $self->{scoll}->find($opts->{query})->sort($opts->{sort})->limit($opts->{limit})->all;
-}
-
-###################################
-# _remove_dots( \%data )          #
-#=================================#
-# replaces dots in the hash-ref's #
-# keys with semicolons, so that   #
-# mongodb won't complain about it #
-###################################
-
-sub _remove_dots {
-	my ($self, $data) = @_;
-
-	if (ref $data eq 'HASH') {
-		my %data;
-		foreach (keys %$data) {
-			my $new = $_;
-			$new =~ s/\./;/g;
-
-			if (ref $data->{$_} && ref $data->{$_} eq 'HASH') {
-				$data{$new} = $self->_remove_dots($data->{$_});
-			} elsif (ref $data->{$_} && ref $data->{$_} eq 'ARRAY') {
-				$data{$new} = [];
-				foreach my $item (@{$data->{$_}}) {
-					push(@{$data{$new}}, $self->_remove_dots($item));
-				}
-			} else {
-				$data{$new} = $data->{$_};
-			}
-		}
-		return \%data;
-	} elsif (ref $data eq 'ARRAY') {
-		my @data;
-		foreach (@$data) {
-			push(@data, $self->_remove_dots($_));
-		}
-		return \@data;
-	} else {
-		return $data;
-	}
-}
-
-#####################################
-# _remove_session_logs($session_id) #
-#===================================#
-# removes all log messages for the  #
-# supplied session ID.              #
-#####################################
-
-sub _remove_session_logs {
-	my ($self, $session_id) = @_;
-
-	$self->{lcoll}->remove({ session_id => "$session_id" }, { safe => $self->{safety} });
-	$self->{scoll}->remove({ _id => "$session_id" }, { safe => $self->{safety} });
-}
+requires qw/log session_log list_sessions _remove_session_logs/;
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -345,8 +136,8 @@ Ido Perlmuter <ido@ido50.net>
  
 =head1 LICENSE AND COPYRIGHT
  
-Copyright (c) 2013, Ido Perlmuter C<< ido@ido50.net >>.
- 
+Copyright (c) 2013-2015, Ido Perlmuter C<< ido@ido50.net >>.
+
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself, either version
 5.8.1 or any later version. See L<perlartistic|perlartistic>
