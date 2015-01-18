@@ -1,18 +1,33 @@
 NAME
-    Pye - Session-based logging platform on top of MongoDB
+    Pye - Session-based logging platform on top of SQL/NoSQL databases
 
 SYNOPSIS
             use Pye;
 
-            my $pye = Pye->new;
+            # start logging on top of a certain backend, say Pye::MongoDB
+            # (you can also call new() directly on the backend server, check
+            #  out the documentation of the specific backend)
 
-            # on session/request/run/whatever:
+            my $pye = Pye->new('MongoDB', {
+                    host => 'mongodb://logserver:27017',
+                    database => 'log_db',
+                    collection => 'myapp_log'
+            });
+
+            # if you've created your own backend, prefix it with a plus sign
+            my $pye = Pye->new('+My::Pye::Backend', \%options);
+
+            # now start logging
             $pye->log($session_id, "Some log message", { data => 'example data' });
 
 DESCRIPTION
-    "Pye" is a dead-simple, session-based logging platform on top of
-    MongoDB. I built "Pye" due to my frustration with file-based loggers
-    that generate logs that are extremely difficult to read, analyze and
+    "Pye" is a dead-simple, session-based logging platform where all logs
+    are stored in a database. Log messages in "Pye" include a date, a text
+    message, and possibly a data structure (hash/array-ref) that
+    "illustrates" the text.
+
+    I built "Pye" due to my frustration with file-based loggers that
+    generate logs that are extremely difficult to read, analyze and
     maintain.
 
     "Pye" is most useful for services (e.g. web apps) that handle requests,
@@ -29,9 +44,9 @@ DESCRIPTION
 
     *   Supporting data
 
-        With "Pye", any complex data structure (i.e. hash) can be attached
-        to any log message, enabling you to illustrate a situation, display
-        complex data, etc.
+        With "Pye", any complex data structure (i.e. hash/array) can be
+        attached to any log message, enabling you to illustrate a situation,
+        display complex data, etc.
 
     *   No log levels
 
@@ -48,70 +63,63 @@ DESCRIPTION
         belong to which session, or trying to find that area of the file
         with messages from that certain date your software died on.
 
+    *   Multiple backends
+
+        "Pye" supports several database backends. Currently, Pye::MongoDB
+        supports "MongoDB", and Pye::SQL supports "MySQL", "PostgreSQL" and
+        "SQLite".
+
+  UPGRADING FROM v1.*.* TO v2.0.0 AND UP
+    Originally, "Pye" was purely a MongoDB logging system, and this module
+    provided the MongoDB functionality. Since v2.0.0, "Pye" became a system
+    with pluggable backends, and the MongoDB functionality was moved to
+    Pye::MongoDB (not provided by this distribution, so you should install
+    that too if you've been using Pye before v2.0.0).
+
+    An improvement over v1.*.* was also introduced. Before, every
+    application had two collections in the database: a log collection and a
+    session collection. The session collection is not needed anymore. You
+    can remove these collections from your current database with no
+    repercussions.
+
+    Unfortunately, the API for v2.0.0 is not backwards compatible with
+    previous versions (but previous *data* is). You will probably need to
+    make two changes:
+
+    *   In your applications, change the lines instantiating a "Pye" object
+        to include the name of the backend (with a hash-ref of options):
+
+                my $pye = Pye->new('MongoDB', %options);
+
+        Alternatively, replace "use Pye" with "use Pye::MongoDB" and call:
+
+                my $pye = Pye::MongoDB->new(%options);
+
+        Also, in %options, the "log_db" option was renamed "database", and
+        "log_coll" was renamed "table" (or "collection", both are
+        supported).
+
+    *   The options for the pye command line utility have changed. You will
+        now need to provide a "-b|--backend" option (with "MongoDB" as the
+        value), and instead of "-l|--log_coll" you need to provide
+        "-c|--collection". Since the session collection has been deprecated,
+        the "-s|--session_coll" option has been removed, and now "-s" is an
+        alias for "-S|--session_id".
+
+    Also note the following dependency changes:
+
+    *   Getopt::Long instead of Getopt::Compact
+
+    *   JSON::MaybeXS instead of JSON
+
 CONSTRUCTOR
-  new( [ %opts ] )
-    Creates a new instance of this class. %opts is anything that can be
-    passed to MongoDB::MongoClient to initiate a database connection, plus
-    the following options:
+  new( $backend, [ %options ] )
+    This is a convenience constructor to easily load a "Pye" backend and
+    create a new instance of it. "Pye" will load the $backend supplied, and
+    pass %options (if any) to its own constructor.
 
-    *   log_db
-
-        The name of the database to use for saving log messages. Defaults to
-        "logs".
-
-    *   log_coll
-
-        The name of the collection in which to save the messages. Defaults
-        to "logs" too.
-
-    *   session_coll
-
-        The name of the collection in which to save session info. Defaults
-        to "sessions".
-
-    *   be_safe
-
-        Boolean indicating whether inserts should be safe (see "insert
-        ($object, $options?)" in MongoDB::Collection for more info).
-        Defaults to a false value.
-
-OBJECT METHODS
-  log( $session_id, $text, [ \%data ] )
-    Inserts a new log message to the database, for the session with the
-    supplied ID and with the supplied text. Optionally, a hash-ref of
-    supporting data can be attached to the message.
-
-    You should note that for consistency, the session ID will always be
-    stored in the database as a string, even if it's a number.
-
-    If a data hash-ref has been supplied, "Pye" will make sure (recursively)
-    that no keys of that hash-ref have dots in them, since MongoDB will
-    refuse to store such hashes. All dots found will be replaced with
-    semicolons (";").
-
-  session_log( $session_id )
-    Returns all log messages for the supplied session ID, sorted by date in
-    ascending order.
-
-  list_sessions( [ \%opts ] )
-    Returns a list of sessions, sorted by the date of the first message
-    logged for each session in descending order. If no options are provided,
-    the latest 10 sessions are returned. The following options are allowed:
-
-    *   limit
-
-        How many sessions to list, defaults to 10.
-
-    *   query
-
-        A MongoDB query hash-ref to filter the sessions. Defaults to an
-        empty query. You can query on the session ID (in the "_id"
-        attribute) and the date (in the "date" attribute).
-
-    *   sort
-
-        A MongoDB sort hash-ref to sort the results. Defaults to "{ date =>
-        -1 }" so that sessions are sorted by date in descending order.
+    If you're writing your own backend which is not under the "Pye::"
+    namespace, prefix it with a plus sign, otherwise "Pye" will not find it.
 
 CONFIGURATION AND ENVIRONMENT
     "Pye" requires no configuration files or environment variables.
@@ -121,19 +129,20 @@ DEPENDENCIES
 
     *   Carp
 
-    *   MongoDB
-
-    *   Tie::IxHash
+    *   Role::Tiny
 
     The command line utility, pye, depends on:
 
-    *   Getopt::Compact
+    *   Getopt::Long
 
-    *   JSON
+    *   JSON::MaybeXS
 
     *   Term::ANSIColor
 
     *   Text::SpanningTable
+
+    It is recommended to install Cpanel::JSON::XS is recommended for fast
+    JSON (de)serialization.
 
 BUGS AND LIMITATIONS
     Please report any bugs or feature requests to "bug-Pye@rt.cpan.org", or
@@ -167,7 +176,7 @@ AUTHOR
     Ido Perlmuter <ido@ido50.net>
 
 LICENSE AND COPYRIGHT
-    Copyright (c) 2013, Ido Perlmuter "ido@ido50.net".
+    Copyright (c) 2013-2015, Ido Perlmuter "ido@ido50.net".
 
     This module is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself, either version 5.8.1 or any later

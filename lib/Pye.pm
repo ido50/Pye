@@ -10,22 +10,36 @@ $VERSION = eval $VERSION;
 
 =head1 NAME
 
-Pye - Session-based logging platform on top of MongoDB
+Pye - Session-based logging platform on top of SQL/NoSQL databases
 
 =head1 SYNOPSIS
 
 	use Pye;
 
-	my $pye = Pye->new;
+	# start logging on top of a certain backend, say Pye::MongoDB
+	# (you can also call new() directly on the backend server, check
+	#  out the documentation of the specific backend)
 
-	# on session/request/run/whatever:
+	my $pye = Pye->new('MongoDB', {
+		host => 'mongodb://logserver:27017',
+		database => 'log_db',
+		collection => 'myapp_log'
+	});
+
+	# if you've created your own backend, prefix it with a plus sign
+	my $pye = Pye->new('+My::Pye::Backend', \%options);
+
+	# now start logging
 	$pye->log($session_id, "Some log message", { data => 'example data' });
 
 =head1 DESCRIPTION
 
-C<Pye> is a dead-simple, session-based logging platform on top of L<MongoDB>.
-I built C<Pye> due to my frustration with file-based loggers that generate logs
-that are extremely difficult to read, analyze and maintain.
+C<Pye> is a dead-simple, session-based logging platform where all logs are stored
+in a database. Log messages in C<Pye> include a date, a text message, and possibly
+a data structure (hash/array-ref) that "illustrates" the text.
+
+I built C<Pye> due to my frustration with file-based loggers that generate logs that
+are extremely difficult to read, analyze and maintain.
 
 C<Pye> is most useful for services (e.g. web apps) that handle requests,
 or otherwise work in sessions, but can be useful in virtually any application,
@@ -42,7 +56,7 @@ Main features:
 
 =item * B<Supporting data>
 
-With C<Pye>, any complex data structure (i.e. hash) can be attached to any log message,
+With C<Pye>, any complex data structure (i.e. hash/array) can be attached to any log message,
 enabling you to illustrate a situation, display complex data, etc.
 
 =item * B<No log levels>
@@ -58,11 +72,100 @@ No more mucking about through endless log files, trying to understand which line
 session, or trying to find that area of the file with messages from that certain date your software
 died on.
 
+=item * B<Multiple backends>
+
+C<Pye> supports several database backends. Currently, L<Pye::MongoDB> supports C<MongoDB>, and
+L<Pye::SQL> supports C<MySQL>, C<PostgreSQL> and C<SQLite>.
+
+=back
+
+=head2 UPGRADING FROM v1.*.* TO v2.0.0 AND UP
+
+Originally, C<Pye> was purely a MongoDB logging system, and this module provided the
+MongoDB functionality. Since v2.0.0, C<Pye> became a system with pluggable backends, and
+the MongoDB functionality was moved to L<Pye::MongoDB> (not provided by this distribution,
+so you should install that too if you've been using Pye before v2.0.0).
+
+An improvement over v1.*.* was also introduced. Before, every application had two collections
+in the database: a log collection and a session collection. The session collection is not
+needed anymore. You can remove these collections from your current database with no
+repercussions.
+
+Unfortunately, the API for v2.0.0 is not backwards compatible with previous versions (but
+previous I<data> is). You will probably need to make two changes:
+
+=over
+
+=item *
+
+In your applications, change the lines instantiating a C<Pye> object to include
+the name of the backend (with a hash-ref of options):
+
+	my $pye = Pye->new('MongoDB', %options);
+
+Alternatively, replace C<use Pye> with C<use Pye::MongoDB> and call:
+
+	my $pye = Pye::MongoDB->new(%options);
+
+Also, in C<%options>, the C<log_db> option was renamed C<database>, and C<log_coll> was
+renamed C<table> (or C<collection>, both are supported).
+
+=item *
+
+The options for the L<pye> command line utility have changed. You will now need to provide
+a C<-b|--backend> option (with "MongoDB" as the value), and instead of C<-l|--log_coll>
+you need to provide C<-c|--collection>. Since the session collection
+has been deprecated, the C<-s|--session_coll> option has been removed, and now C<-s>
+is an alias for C<-S|--session_id>.
+
+=back
+
+Also note the following dependency changes:
+
+=over
+
+=item * L<Getopt::Long> instead of L<Getopt::Compact>
+
+=item * L<JSON::MaybeXS> instead of L<JSON>
+
 =back
 
 =cut
 
 requires qw/log session_log list_sessions _remove_session_logs/;
+
+
+=head1 CONSTRUCTOR
+
+=head2 new( $backend, [ %options ] )
+
+This is a convenience constructor to easily load a C<Pye> backend and
+create a new instance of it. C<Pye> will load the C<$backend> supplied,
+and pass C<%options> (if any) to its own constructor.
+
+If you're writing your own backend which is not under the C<Pye::> namespace,
+prefix it with a plus sign, otherwise C<Pye> will not find it.
+
+=cut
+
+
+sub new {
+	my ($self, $backend, %options) = @_;
+
+	if ($backend =~ m/^\+/) {
+		$backend = $';
+	} elsif ($backend !~ m/^Pye::/) {
+		$backend = 'Pye::'.$backend;
+	}
+
+	eval "require $backend";
+
+	if ($@) {
+		croak "Can't load Pye backend $backend: $@";
+	}
+
+	return $backend->new(%options);
+}
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -74,11 +177,9 @@ C<Pye> depends on the following CPAN modules:
 
 =over
 
-=item * Carp
+=item * L<Carp>
 
-=item * MongoDB
-
-=item * Tie::IxHash
+=item * L<Role::Tiny>
 
 =back
 
@@ -86,15 +187,18 @@ The command line utility, L<pye>, depends on:
 
 =over
 
-=item *  Getopt::Compact
+=item *  L<Getopt::Long>
 
-=item *  JSON
+=item *  L<JSON::MaybeXS>
 
-=item *  Term::ANSIColor
+=item *  L<Term::ANSIColor>
 
-=item *  Text::SpanningTable
+=item *  L<Text::SpanningTable>
 
 =back
+
+It is recommended to install L<Cpanel::JSON::XS> is recommended
+for fast JSON (de)serialization.
 
 =head1 BUGS AND LIMITATIONS
 
