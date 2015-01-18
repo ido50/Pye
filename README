@@ -5,7 +5,7 @@ SYNOPSIS
             use Pye;
 
             # start logging on top of a certain backend, say Pye::MongoDB
-            # (you can also call new() directly on the backend server, check
+            # (you can also call new() directly on the backend class, check
             #  out the documentation of the specific backend)
 
             my $pye = Pye->new('MongoDB', {
