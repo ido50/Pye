@@ -181,7 +181,8 @@ An optional reference can also be supplied and stored with the message.
 
 Returns a list of all messages stored under session ID C<$session_id>.
 Every item in the array is a hash-ref with the following keys: C<session_id>,
-C<date>, C<text> and possibly C<data>.
+C<date> in (YYYY-MM-DD format), C<time> (in HH:MM:SS.SSS format), C<text>
+and possibly C<data>.
 
 =head2 list_sessions( [ \%options ] )
 
@@ -200,10 +201,8 @@ defaults to descending order by C<date>)
 
 =back
 
-=head2 format_datetime( $date )
-
-Takes a datetime value as stored in the database, and returns a list with two
-items: the date in YYYY-MM-DD format, and the time in HH:MM:SS.SSS format.
+Every item (i.e. session) in the list should be a hash-ref with the keys C<id>,
+C<date> (in YYYY-MM-DD format) and C<time> (in HH:MM:SS.SSS format).
 
 =head2 _remove_session_logs( $session_id )
 
@@ -211,7 +210,7 @@ Removes all messages for a specific session.
 
 =cut
 
-requires qw/log session_log list_sessions format_datetime _remove_session_logs/;
+requires qw/log session_log list_sessions _remove_session_logs/;
 
 =head1 CONFIGURATION AND ENVIRONMENT
   

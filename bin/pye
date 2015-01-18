@@ -163,9 +163,8 @@ if ($options{session_id}) {
 	my @entries = $pye->session_log($options{session_id});
 	if (scalar @entries) {
 		foreach my $doc (@entries) {
-			my ($date, $time) = $pye->format_datetime($doc->{date});
 			print color 'bold red';
-			print $date, ', ', $time, ': ';
+			print $doc->{date}, ', ', $doc->{time}, ': ';
 			print color 'reset';
 			print $doc->{text}, "\n";
 			if ($doc->{data}) {
@@ -193,8 +192,7 @@ if ($options{session_id}) {
 		print $t->dhr;
 		print color 'reset';
 		foreach (@sessions) {
-			my ($date, $time) = $pye->format_datetime($_->{date});
-			print $t->row($date, $time, $_->{_id});
+			print $t->row($_->{date}, $_->{time}, $_->{id});
 		}
 		print color 'bold';
 		print $t->hr('bottom');
