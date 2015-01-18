@@ -8,11 +8,11 @@ SYNOPSIS
             # (you can also call new() directly on the backend class, check
             #  out the documentation of the specific backend)
 
-            my $pye = Pye->new('MongoDB', {
+            my $pye = Pye->new('MongoDB',
                     host => 'mongodb://logserver:27017',
                     database => 'log_db',
                     collection => 'myapp_log'
-            });
+            );
 
             # if you've created your own backend, prefix it with a plus sign
             my $pye = Pye->new('+My::Pye::Backend', \%options);
