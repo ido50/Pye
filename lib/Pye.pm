@@ -191,11 +191,12 @@ are supported:
 
 =over
 
-=item * sort - how to sort sessions (every backend will accept a different value)
+=item * sort - how to sort sessions (every backend will accept a different value;
+defaults to descending order by C<date>)
 
-=item * skip - after sorting, skip a number of sessions
+=item * skip - after sorting, skip a number of sessions (defaults to 0)
 
-=item * limit - limit the number of sessions returned
+=item * limit - limit the number of sessions returned (defaults to 10)
 
 =back
 
