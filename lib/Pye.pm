@@ -74,10 +74,14 @@ died on.
 
 =item * B<Multiple backends>
 
-C<Pye> supports several database backends. Currently, L<Pye::MongoDB> supports C<MongoDB>, and
-L<Pye::SQL> supports C<MySQL>, C<PostgreSQL> and C<SQLite>.
+C<Pye> supports several database backends. Currently, L<Pye::MongoDB> supports MongoDB, and
+L<Pye::SQL> supports MySQL, PostgreSQL and SQLite.
 
 =back
+
+This package provides two purposes. It provides a constructor that dynamically loads the
+requested backend class and creates an object of it. It is also a role (with L<Role::Tiny>)
+detailing methods backend classes are required to implement.
 
 =head2 UPGRADING FROM v1.*.* TO v2.0.0 AND UP
 
@@ -86,9 +90,9 @@ MongoDB functionality. Since v2.0.0, C<Pye> became a system with pluggable backe
 the MongoDB functionality was moved to L<Pye::MongoDB> (not provided by this distribution,
 so you should install that too if you've been using Pye before v2.0.0).
 
-An improvement over v1.*.* was also introduced. Before, every application had two collections
-in the database: a log collection and a session collection. The session collection is not
-needed anymore. You can remove these collections from your current database with no
+An improvement over v1.*.* was also introduced: before, every application had two collections
+in the database - a log collection and a session collection. The session collection is not
+needed anymore. You can remove these session collections from your current database with no
 repercussions.
 
 Unfortunately, the API for v2.0.0 is not backwards compatible with previous versions (but
@@ -99,7 +103,7 @@ previous I<data> is). You will probably need to make two changes:
 =item *
 
 In your applications, change the lines instantiating a C<Pye> object to include
-the name of the backend (with a hash-ref of options):
+the name of the backend:
 
 	my $pye = Pye->new('MongoDB', %options);
 
@@ -132,9 +136,6 @@ Also note the following dependency changes:
 
 =cut
 
-requires qw/log session_log list_sessions _remove_session_logs/;
-
-
 =head1 CONSTRUCTOR
 
 =head2 new( $backend, [ %options ] )
@@ -166,6 +167,50 @@ sub new {
 
 	return $backend->new(%options);
 }
+
+=head1 REQUIRED METHODS
+
+The following methods must be implemented by consuming classes:
+
+=head2 log( $session_id, $text, [ \%data ] )
+
+Log a new message, with text C<$text>, under session ID C<$session_id>.
+An optional reference can also be supplied and stored with the message.
+
+=head2 session_log( $session_id )
+
+Returns a list of all messages stored under session ID C<$session_id>.
+Every item in the array is a hash-ref with the following keys: C<session_id>,
+C<date>, C<text> and possibly C<data>.
+
+=head2 list_sessions( [ \%options ] )
+
+Returns a list of sessions in the log, based on the provided options. If no
+options are provided, the latest 10 sessions should be returned. The following options
+are supported:
+
+=over
+
+=item * sort - how to sort sessions (every backend will accept a different value)
+
+=item * skip - after sorting, skip a number of sessions
+
+=item * limit - limit the number of sessions returned
+
+=back
+
+=head2 format_datetime( $date )
+
+Takes a datetime value as stored in the database, and returns a list with two
+items: the date in YYYY-MM-DD format, and the time in HH:MM:SS.SSS format.
+
+=head2 _remove_session_logs( $session_id )
+
+Removes all messages for a specific session.
+
+=cut
+
+requires qw/log session_log list_sessions format_datetime _remove_session_logs/;
 
 =head1 CONFIGURATION AND ENVIRONMENT
   

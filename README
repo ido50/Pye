@@ -66,8 +66,13 @@ DESCRIPTION
     *   Multiple backends
 
         "Pye" supports several database backends. Currently, Pye::MongoDB
-        supports "MongoDB", and Pye::SQL supports "MySQL", "PostgreSQL" and
-        "SQLite".
+        supports MongoDB, and Pye::SQL supports MySQL, PostgreSQL and
+        SQLite.
+
+    This package provides two purposes. It provides a constructor that
+    dynamically loads the requested backend class and creates an object of
+    it. It is also a role (with Role::Tiny) detailing methods backend
+    classes are required to implement.
 
   UPGRADING FROM v1.*.* TO v2.0.0 AND UP
     Originally, "Pye" was purely a MongoDB logging system, and this module
@@ -76,10 +81,10 @@ DESCRIPTION
     Pye::MongoDB (not provided by this distribution, so you should install
     that too if you've been using Pye before v2.0.0).
 
-    An improvement over v1.*.* was also introduced. Before, every
-    application had two collections in the database: a log collection and a
+    An improvement over v1.*.* was also introduced: before, every
+    application had two collections in the database - a log collection and a
     session collection. The session collection is not needed anymore. You
-    can remove these collections from your current database with no
+    can remove these session collections from your current database with no
     repercussions.
 
     Unfortunately, the API for v2.0.0 is not backwards compatible with
@@ -87,7 +92,7 @@ DESCRIPTION
     make two changes:
 
     *   In your applications, change the lines instantiating a "Pye" object
-        to include the name of the backend (with a hash-ref of options):
+        to include the name of the backend:
 
                 my $pye = Pye->new('MongoDB', %options);
 
@@ -120,6 +125,38 @@ CONSTRUCTOR
 
     If you're writing your own backend which is not under the "Pye::"
     namespace, prefix it with a plus sign, otherwise "Pye" will not find it.
+
+REQUIRED METHODS
+    The following methods must be implemented by consuming classes:
+
+  log( $session_id, $text, [ \%data ] )
+    Log a new message, with text $text, under session ID $session_id. An
+    optional reference can also be supplied and stored with the message.
+
+  session_log( $session_id )
+    Returns a list of all messages stored under session ID $session_id.
+    Every item in the array is a hash-ref with the following keys:
+    "session_id", "date", "text" and possibly "data".
+
+  list_sessions( [ \%options ] )
+    Returns a list of sessions in the log, based on the provided options. If
+    no options are provided, the latest 10 sessions should be returned. The
+    following options are supported:
+
+    *   sort - how to sort sessions (every backend will accept a different
+        value)
+
+    *   skip - after sorting, skip a number of sessions
+
+    *   limit - limit the number of sessions returned
+
+  format_datetime( $date )
+    Takes a datetime value as stored in the database, and returns a list
+    with two items: the date in YYYY-MM-DD format, and the time in
+    HH:MM:SS.SSS format.
+
+  _remove_session_logs( $session_id )
+    Removes all messages for a specific session.
 
 CONFIGURATION AND ENVIRONMENT
     "Pye" requires no configuration files or environment variables.

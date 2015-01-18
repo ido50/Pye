@@ -173,9 +173,7 @@ if ($options{session_id}) {
 				my @rows = split(/\n/, $json->encode($doc->{data}));
 				for (my $i = 0; $i <= $#rows; $i++) {
 					chomp($rows[$i]);
-					print "\t $rows[$i]";
-					#print "\n" if $i < $#rows;
-					print "\n";
+					print "\t $rows[$i]\n";
 				}
 			}
 			print "\n";
