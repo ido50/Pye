@@ -136,7 +136,8 @@ REQUIRED METHODS
   session_log( $session_id )
     Returns a list of all messages stored under session ID $session_id.
     Every item in the array is a hash-ref with the following keys:
-    "session_id", "date", "text" and possibly "data".
+    "session_id", "date" in (YYYY-MM-DD format), "time" (in HH:MM:SS.SSS
+    format), "text" and possibly "data".
 
   list_sessions( [ \%options ] )
     Returns a list of sessions in the log, based on the provided options. If
@@ -150,10 +151,8 @@ REQUIRED METHODS
 
     *   limit - limit the number of sessions returned (defaults to 10)
 
-  format_datetime( $date )
-    Takes a datetime value as stored in the database, and returns a list
-    with two items: the date in YYYY-MM-DD format, and the time in
-    HH:MM:SS.SSS format.
+    Every item (i.e. session) in the list should be a hash-ref with the keys
+    "id", "date" (in YYYY-MM-DD format) and "time" (in HH:MM:SS.SSS format).
 
   _remove_session_logs( $session_id )
     Removes all messages for a specific session.
