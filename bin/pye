@@ -45,18 +45,8 @@ I might create the following bash aliases:
 
 Then, I can easily inspect the log:
 
-	myapplog			# will list latest sessions in the log
-	myapplog -s 'abcde'	# will display the complete log for session 'abcde'
-
-	'b|backend=s'			=> \$backend,
-	't|type=s'				=> \$options{db_type},
-	'H|host=s'				=> \$options{host},
-	'p|port=i'				=> \$options{port},
-	'd|database=s'			=> \$options{database},
-	'T|c|collection|table=s'	=> \$options{table},
-	's|S|session_id=s'		=> \$options{session_id},
-	'm|message=s'			=> \$options{message},
-	'D|data=s'				=> \$options{data}
+	myapplog                  # will list latest sessions in the log
+	myapplog -s 'abcde'       # will display the complete log for session 'abcde'
 
 =head1 OPTIONS
 
@@ -67,38 +57,38 @@ the options.
 
 =head2 -b, --backend
 
-B<Required>.
+I<Required>.
 
 The C<Pye> backend to use. For example, C<MongoDB> for L<Pye::MongoDB>.
 
 =head2 -t, --type
 
-B<Backend-specific>.
+I<Backend-specific>.
 
 The database system to use, only for backends that support different database systems.
 L<Pye::SQL>, for example, supports MySQL, PostgreSQL and SQLite.
 
 =head2 -H, --host
 
-B<Backend-specific>.
+I<Backend-specific>.
 
 The database host.
 
 =head2 -p, --port
 
-B<Backend-specific>.
+I<Backend-specific>.
 
 The database port.
 
 =head2 -d, --database
 
-B<Backend-specific>.
+I<Backend-specific>.
 
 The name of the database. Defaults to "logs".
 
 =head2 -T, -c, --collection, --table
 
-B<Backend-specific>.
+I<Backend-specific>.
 
 The name of the table or collection where log messages are stored. Defaults to
 "logs". C<-c> and C<--collection> are aliases for <--table>, the option sent to
@@ -106,19 +96,19 @@ the backend will be called C<table>.
 
 =head2 -s, -S, --session_id
 
-B<Optional>.
+I<Optional>.
 
 The session ID to display or log a message for.
 
 =head2 -m, --message
 
-B<Optional>.
+I<Optional>.
 
 The message to log to the database (requires session ID to be supplied too).
 
 =head2 -D, --data
 
-B<Optional>.
+I<Optional>.
 
 A JSON string to attach to the message.
 

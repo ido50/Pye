@@ -1,11 +1,11 @@
 package Pye;
 
-# ABSTRACT: Session-based logging platform on top of MongoDB
+# ABSTRACT: Session-based logging platform on top of SQL/NoSQL databases
 
 use Carp;
 use Role::Tiny;
 
-our $VERSION = "2.000000";
+our $VERSION = "2.000001";
 $VERSION = eval $VERSION;
 
 =head1 NAME
@@ -83,7 +83,7 @@ This package provides two purposes. It provides a constructor that dynamically l
 requested backend class and creates an object of it. It is also a role (with L<Role::Tiny>)
 detailing methods backend classes are required to implement.
 
-=head2 UPGRADING FROM v1.*.* TO v2.0.0 AND UP
+=head2 UPGRADING TO v2.0.0 AND UP
 
 Originally, C<Pye> was purely a MongoDB logging system, and this module provided the
 MongoDB functionality. Since v2.0.0, C<Pye> became a system with pluggable backends, and

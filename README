@@ -74,7 +74,7 @@ DESCRIPTION
     it. It is also a role (with Role::Tiny) detailing methods backend
     classes are required to implement.
 
-  UPGRADING FROM v1.*.* TO v2.0.0 AND UP
+  UPGRADING TO v2.0.0 AND UP
     Originally, "Pye" was purely a MongoDB logging system, and this module
     provided the MongoDB functionality. Since v2.0.0, "Pye" became a system
     with pluggable backends, and the MongoDB functionality was moved to
