@@ -1,6 +1,7 @@
 Revision history for Pye
 
 {{$NEXT}}
+	- Small documentation fixes
 
 2.000000  2015-01-19 20:14:46+02:00 Asia/Jerusalem
 	- Bugfix: _remove_dots should also remove dots for hashes in an array
