@@ -45,8 +45,8 @@ I might create the following bash aliases:
 
 Then, I can easily inspect the log:
 
-	myapplog                  # will list latest sessions in the log
-	myapplog -s 'abcde'       # will display the complete log for session 'abcde'
+	myapplog                # will list latest sessions in the log
+	myapplog -s abcde       # will display the complete log for session 'abcde'
 
 =head1 OPTIONS
 
@@ -91,7 +91,7 @@ The name of the database. Defaults to "logs".
 I<Backend-specific>.
 
 The name of the table or collection where log messages are stored. Defaults to
-"logs". C<-c> and C<--collection> are aliases for <--table>, the option sent to
+"logs". C<-c> and C<--collection> are aliases for C<--table>, the option sent to
 the backend will be called C<table>.
 
 =head2 -s, -S, --session_id
