@@ -5,7 +5,7 @@ package Pye;
 use Carp;
 use Role::Tiny;
 
-our $VERSION = "2.000001";
+our $VERSION = "2.001000";
 $VERSION = eval $VERSION;
 
 =head1 NAME

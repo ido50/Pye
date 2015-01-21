@@ -55,6 +55,10 @@ are not strictly required by C<pye>, but I<may> be required by the backend used.
 You need to refer to the documentation of the specific backend to learn more about
 the options.
 
+Different backends may support more options than the basic ones described here. C<pye>
+passes any option it doesn't recognize to the backend, but these options I<must> be
+provided in full form, e.g. C<--find_master 1> or C<--find_master=1>.
+
 =head2 -b, --backend
 
 I<Required>.
@@ -126,7 +130,9 @@ my $r = GetOptions(
 	'T|c|collection|table:s'	=> \$options{table},
 	's|S|session_id:s'		=> \$options{session_id},
 	'm|message:s'			=> \$options{message},
-	'D|data:s'				=> \$options{data}
+	'D|data:s'				=> \$options{data},
+	'u|username:s'			=> \$options{username},
+	'p|password:s'			=> \$options{password}
 );
 
 pod2usage(1)
@@ -135,9 +141,21 @@ pod2usage(1)
 pod2usage(2)
 	if $r && !$backend;
 
+# make sure there are no undefined options in %options
 foreach (keys %options) {
 	delete $options{$_}
 		unless defined $options{$_};
+}
+
+# add anything we don't recognize to %options too, so that
+# it's available to the backend
+while (scalar @ARGV) {
+	if ($ARGV[0] =~ m/^--/) {
+		my ($o, $v) = split(/=/, shift @ARGV);
+		$v = shift @ARGV
+			unless defined $v;
+		$options{$o} = $v;
+	}
 }
 
 my $pye = Pye->new($backend, %options);
