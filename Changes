@@ -1,6 +1,7 @@
 Revision history for Pye
 
 {{$NEXT}}
+	- Small documentation update
 
 2.001000  2015-01-21 19:26:08+02:00 Asia/Jerusalem
 	- Feature: Added -u|--username and -p|--password to the pye command line

@@ -57,7 +57,8 @@ the options.
 
 Different backends may support more options than the basic ones described here. C<pye>
 passes any option it doesn't recognize to the backend, but these options I<must> be
-provided in full form, e.g. C<--find_master 1> or C<--find_master=1>.
+provided in full form, e.g. C<--find_master 1> or C<--find_master=1>. Refer to your
+backend of choice for more information.
 
 =head2 -b, --backend
 
@@ -115,6 +116,18 @@ The message to log to the database (requires session ID to be supplied too).
 I<Optional>.
 
 A JSON string to attach to the message.
+
+=head2 -u, --username
+
+I<Backend-specific>.
+
+The username to connect to the database with.
+
+=head2 -p, --password
+
+I<Backend-specific>.
+
+The password to connect to the database with.
 
 =cut
 
